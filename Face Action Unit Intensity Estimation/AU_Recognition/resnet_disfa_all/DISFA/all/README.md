@@ -1,1 +1,1 @@
-place trained model weight (ResNet): resnet.pt
+place **trained model weight** (ResNet) here: `resnet.pt`
