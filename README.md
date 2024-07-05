@@ -38,7 +38,7 @@ The scheme has been validated with psychological tests such as *visual response 
 </div>
 
 
-### Datasets Supported
+### Datasets
 
 | Dataset             | Type         | Size       | Features 
 | ------------------- | ------------ | ---------- | ------------------ |
