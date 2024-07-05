@@ -21,9 +21,33 @@ The scheme has been validated with psychological tests such as *visual response 
 
 
 ## Eye Detection and Tracking
-
+<div align="center">
+  <img src="images/Eye_Detection_Methods.png" width="600" />
+</div>
 
 ## Cognitive Load Assessment Methodology
-
+<div align="center">
+  <img src="images/Cognitive_Load_Methodology.png" width="600" />
+</div>
 
 ## Emotion Assessment Methodology
+<div align="center">
+  <img src="images/Emotion_Assessment_Methodoly.png" width="600" />
+  <img src="images/Facial_Action_Unit_Intensity_Model_Architecture.png" width="1000" />
+  <img src="images/Facial_Action_Unit_Intensity_Training.png" width="500" />
+</div>
+
+
+### Datasets Supported
+
+| Dataset             | Type         | Size       | Features 
+| ------------------- | ------------ | ---------- | ------------------ |
+| EmotioNet           | Image        | 9,75,000   | 8 Emotions         |
+| AffectNet           | Image        | 4,50,000   | 16 Overall Emotions, 6 Basic Emotions  |
+| DISFA               | Video        | 27         | 12 Action Units                 |
+
+
+## Contributions
+[Saurabh Chatterjee](https://github.com/chatterjeesaurabh) </br>
+MTech, Signal Processing and Machine Learning </br>
+IIT Kharagpur
