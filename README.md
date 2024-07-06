@@ -50,4 +50,4 @@ The scheme has been validated with psychological tests such as *visual response 
 ## Contributions
 [Saurabh Chatterjee](https://github.com/chatterjeesaurabh) </br>
 MTech, Signal Processing and Machine Learning </br>
-IIT Kharagpur
+Indian Institute of Technology (IIT) Kharagpur
