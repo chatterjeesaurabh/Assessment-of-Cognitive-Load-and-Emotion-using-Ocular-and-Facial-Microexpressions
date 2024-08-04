@@ -1,4 +1,4 @@
-# Assessment of Cognitive Load and Emotion using Ocular and Facial Microexpressions
+# Assessment of Cognitive Load and Emotion using Ocular Features and Facial Microexpressions
 
 This project aims to assess the validity of using eye motion features as indicators of *cognitive load* and *emotional state*. Ocular features such as saccades and fixations, subjective questionnaires and task performance measures has been used to assess the **mental workload** while the user performs the designed tasks. Simultaneous acquisition of physiological signal is performed, which is currently the high-speed image sequence of user’s face as input. **Facial micro-expression intensity** has been estimated using a ResNet based model along with ocular features while the users were shown emotional stimuli.
 
