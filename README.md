@@ -51,3 +51,6 @@ The scheme has been validated with psychological tests such as *visual response 
 [Saurabh Chatterjee](https://github.com/chatterjeesaurabh) </br>
 MTech, Signal Processing and Machine Learning </br>
 Indian Institute of Technology (IIT) Kharagpur
+
+## References
+- D. Chang, Y. Yin, Z. Li, M. Tran and M. Soleymani, "LibreFace: An Open-Source Toolkit for Deep Facial Expression Analysis," in 2024 IEEE/CVF Winter Conference on Applications of Computer Vision (WACV), Waikoloa, HI, USA, 2024 pp. 8190-8200. doi: 10.1109/WACV57701.2024.00802.
