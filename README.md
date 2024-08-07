@@ -12,12 +12,12 @@ The scheme has been validated with psychological tests such as *visual response 
 
 
 ## Brief Steps
-* Developed face and facial landmark detection pipeline for video, and performed pupil localization by radial inspection of gradients. Developed CUDA algorithms to accelerate execution speed by 300 times.
+* Developed face and **facial landmark** detection pipeline for video, and performed **pupil localization** by radial inspection of gradients. Developed **CUDA** algorithms using **Numba** to accelerate execution speed by 300 times.
 * Alternatively, used Mediapipe Face Landmark model to detect and track eye iris, eye corners and eyelid coordinates.
-* Performed blink detection, and iris location correction using Cubic Spline interpolation.
-* Screen gaze and heatmap estimation using Polynomial Regression. Classified eye motion into saccades and fixations using iris velocity and dispersion based thresholds.
+* Performed **blink detection**, and iris location correction using Cubic Spline interpolation.
+* Screen gaze and heatmap estimation using **Polynomial Regression**. Classified eye motion into saccades and fixations using iris velocity and dispersion based thresholds.
 * Designed psychometric game(s): Visual Response Test and N-Back Test, which can induce different levels of mental workload.
-* Built deep learning model using ResNet-18 by pre-training with large facial expression datasets ([AffectNet](http://mohammadmahoor.com/affectnet/) and [EmotioNet](https://www.cv-foundation.org/openaccess/content_cvpr_2016/papers/Benitez-Quiroz_EmotioNet_An_Accurate_CVPR_2016_paper.pdf)) and further fine tuned with action unit intensity labels ([DISFA](http://mohammadmahoor.com/disfa/) dataset) along with simultaneous **Knowledge-Distillation** from a larger **Masked Auto-Encoder** model to estimate facial micro-expressions.
+* Built deep learning model using **ResNet-18** by pre-training with large facial expression datasets ([AffectNet](http://mohammadmahoor.com/affectnet/) and [EmotioNet](https://www.cv-foundation.org/openaccess/content_cvpr_2016/papers/Benitez-Quiroz_EmotioNet_An_Accurate_CVPR_2016_paper.pdf)) and further fine tuned with action unit intensity labels ([DISFA](http://mohammadmahoor.com/disfa/) dataset) along with simultaneous **Knowledge-Distillation** from a larger **Masked Auto-Encoder** model to estimate facial micro-expressions.
 
 
 ## Eye Detection and Tracking
