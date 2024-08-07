@@ -10,6 +10,8 @@ from utils import get_data_loader
 from models.resnet18 import ResNet18
 from models.mae import MaskedAutoEncoder
 
+# TRAINING ResNet and MAE Encoder on DISFA Dataset (the PRE-TRAINING step):
+# Run: 'main.py' with the defined arguments
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -30,15 +32,16 @@ class solver_train(nn.Module):
 		if config.model_name == "resnet":
 			self.model = ResNet18(config).cuda()
 			if config.ffhq_pretrain is not None:
-				print("Load resnet18 pretrain weights from FFHQ ...")
+				print("Load resnet18 pretrain weights from FFHQ ...")			# if available: use ResNet Pre-Trained on FFHQ & AffectNet
 				checkpoints = torch.load(config.ffhq_pretrain)['model']
 				del checkpoints['classifier.4.weight']
 				del checkpoints['classifier.4.bias']
 				self.model.load_state_dict(checkpoints, strict=False)
+
 		elif config.model_name == "emotionnet_mae":
 			self.model = MaskedAutoEncoder(config).cuda()
 			if config.ffhq_pretrain is not None:
-				print("Load MaskedAutoEncoder pretrain weights from FFHQ ...")
+				print("Load MaskedAutoEncoder pretrain weights from FFHQ ...")	# if available: use MAE Encoder Pre-Trained on FFHQ & AffectNet
 				checkpoints = torch.load(config.ffhq_pretrain)['model']
 				del checkpoints['interpreter.4.weight']
 				del checkpoints['interpreter.4.bias']
@@ -74,7 +77,7 @@ class solver_train(nn.Module):
 
 
 	def train_model(self, train_loader):
-		self.train()
+		self.train()						# put the model into TRAINING MODE
 		total_loss, total_sample = 0., 0
 		
 		for (images, labels, heatmaps) in tqdm(train_loader):
@@ -82,13 +85,13 @@ class solver_train(nn.Module):
 			
 			batch_size = images.shape[0]
 
-			self.optimizer.zero_grad()
+			self.optimizer.zero_grad()			# Reset the Gradients to zero. Otherwise, the gradients will accumulate over loop
 			pred = self.model(images)
-			pred = pred * 5.0
-			loss = self.criterion(pred.reshape(-1), labels.reshape(-1))
-			loss.backward()
+			pred = pred * 5.0					## 
+			loss = self.criterion(pred.reshape(-1), labels.reshape(-1))		# MSE Loss
+			loss.backward()						# calculates the gradients in the computation graph
 			torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.clip)
-			self.optimizer.step()
+			self.optimizer.step()				# will use the gradients to update the model parameters to minimize the loss
 
 			total_loss += loss.item()*batch_size
 			total_sample += batch_size
@@ -106,16 +109,16 @@ class solver_train(nn.Module):
 
 
 	def test_model(self, test_loader):
-		with torch.no_grad():
-			self.eval()
+		with torch.no_grad():								# tells PyTorch that it doesn't need to keep track of the gradients: so saves memory and computation.
+			self.eval()										# put the model into EVALUATION/TEST MODE
 			pred_list, gt_list = [], []
 			mse_list, mae_list, pcc_list = [], [], []
 
 			for (images, labels) in tqdm(test_loader):
 				images, labels = images.cuda(), labels.cuda()
 
-				labels_pred = self.model(images)
-				loss = self.criterion(labels_pred.reshape(-1), labels.reshape(-1))
+				labels_pred = self.model(images)			# Prediction by the Model
+				loss = self.criterion(labels_pred.reshape(-1), labels.reshape(-1))		# MSE Loss
 				labels_pred = labels_pred * 5.0
 
 				pred_list.append(labels_pred)
@@ -172,7 +175,7 @@ class solver_train(nn.Module):
 	def run(self):
 		best_val_pcc = -1.0
 
-		patience = self.config.patience
+		patience = self.config.patience		# for Early Stopping
 		for epochs in range(1, self.config.num_epochs+1):
 			print('Epoch: {}/{}'.format(epochs, self.config.num_epochs))
 
@@ -188,7 +191,7 @@ class solver_train(nn.Module):
 				patience = self.config.patience
 				best_val_pcc = sum(val_pcc)/len(val_pcc)
 			else:
-				patience -= 1
+				patience -= 1			# EARLY STOPPING: if no improvement of Validation Score (here PCC) for 'patience' no. of Epochs, then Stop Training further
 				if patience == 0:
 					break
 

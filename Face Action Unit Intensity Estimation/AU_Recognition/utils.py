@@ -18,7 +18,7 @@ def set_seed(seed):
 
 
 def get_data_loader(csv_file, train, config):
-	dataset = MyDataset(csv_file, train, config)
+	dataset = MyDataset(csv_file, train, config)		# returns: if Train: (image, label, heatmap), and if Test: (image, label); for given index
 	loader = DataLoader(
 				dataset=dataset,
 				batch_size=config.batch_size,
@@ -31,7 +31,7 @@ def get_data_loader(csv_file, train, config):
 
 # Custom: 
 def get_inference_only_data_loader(csv_file, config):
-	dataset = MyDataset_Model_Run_Only(csv_file, config)		##
+	dataset = MyDataset_Model_Run_Only(csv_file, config)		## returns: image
 	loader = DataLoader(
 				dataset=dataset,
 				batch_size=config.batch_size,

@@ -11,6 +11,8 @@ from models.resnet18 import ResNet18
 from models.mae import MaskedAutoEncoder
 import torch.nn.functional as F
 
+# TRAINING ResNet with DISFA dataset - with KNOWLEDGE DISTILLATION from MAE Encoder (Fine-Tuning step):
+# Run this 'distillation.py' with the defined arguments. Code : 'solver_fm_distillation_grad.py'
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -28,9 +30,9 @@ class solver_fm_distillation_grad(nn.Module):
 
 		# Initiate the networks
 		if config.student_model_name == "resnet":
-			self.student_model = ResNet18(config).cuda()
+			self.student_model = ResNet18(config).cuda()		# ResNet-18 : Student model
 			if config.student_model_path is not None:
-				print("Load pretrain weights from FFHQ/AffectNet ...")
+				print("Load pretrain weights from FFHQ/AffectNet ...")			# if available: use ResNet Pre-Trained on FFHQ & AffectNet
 				checkpoints = torch.load(config.student_model_path)['model']
 				del checkpoints['classifier.4.weight']
 				del checkpoints['classifier.4.bias']
@@ -38,9 +40,9 @@ class solver_fm_distillation_grad(nn.Module):
 		else:
 			raise NotImplementedError
 
-		if config.teacher_model_name == "emotionnet_mae":
+		if config.teacher_model_name == "emotionnet_mae":		# MAE Encoder : Teacher model
 			self.teacher_model = MaskedAutoEncoder(config).cuda()
-			if config.teacher_model_path is not None:
+			if config.teacher_model_path is not None:							# use MAE Encoder Fine-Tuned on DISFA
 				teacher_model_path = os.path.join(self.config.teacher_model_path, self.config.data, self.config.fold, self.config.teacher_model_name+'.pt')
 				print("Load pretrain weights from DISFA, path : ",teacher_model_path)
 				checkpoints = torch.load(teacher_model_path)['model']
@@ -51,7 +53,7 @@ class solver_fm_distillation_grad(nn.Module):
 		# Setup the optimizers and loss function
 		opt_params = list(self.student_model.parameters())
 		self.optimizer = torch.optim.AdamW(opt_params, lr=config.learning_rate, weight_decay=config.weight_decay)
-		self.criterion = nn.MSELoss()
+		self.criterion = nn.MSELoss()		# MSE Loss
 		
 		print("Number of params: ",count_parameters(self.student_model))
 		# Setup AU index
@@ -65,11 +67,11 @@ class solver_fm_distillation_grad(nn.Module):
 		Compute the knowledge-distillation (KD) loss given outputs, labels.
 		"Hyperparameters": temperature and alpha
 		NOTE: the KL Divergence for PyTorch comparing the softmaxs of teacher
-		and student expects the input tensor to be log probabilities! See Issue #2
+		and student expects the ** "input tensor" to be "log probabilities"** ! See Issue #2
 		"""
 		kldiv_loss = nn.KLDivLoss(reduction="batchmean")
-		KD_loss = kldiv_loss(torch.log(F.relu(outputs)+1e-7),
-								F.relu(teacher_outputs)+1e-7)
+		KD_loss = kldiv_loss(torch.log(F.relu(outputs)+1e-7),		# since "input tensor" needs to be "log probabilities"
+								F.relu(teacher_outputs)+1e-7)		# the "targets" are interpreted as *probabilities* by default
 		return KD_loss
 
 	def get_data_loaders(self):
@@ -88,8 +90,8 @@ class solver_fm_distillation_grad(nn.Module):
 
   
 	def train_model(self, train_loader):
-		self.student_model.train()
-		self.teacher_model.eval()
+		self.student_model.train()			# set Student model to: TRAIN mode
+		self.teacher_model.eval()			# set Teacher model to: TEST/EVAL mode
 		total_loss, total_sample = 0., 0
 		
 		for (images, labels, heatmaps) in tqdm(train_loader):
@@ -97,34 +99,34 @@ class solver_fm_distillation_grad(nn.Module):
 			
 			batch_size = images.shape[0]
 			with torch.no_grad():
-				teacher_pred, teacher_feature = self.teacher_model(images)
+				teacher_pred, teacher_feature = self.teacher_model(images)		# (Y_t): Teacher model prediction at its output; & (F_t): feature layer before the classification layer values 
 
 
 
-			self.optimizer.zero_grad()
-			student_pred, student_feature = self.student_model(images)
+			self.optimizer.zero_grad()		# Reset the Gradients to zero. Otherwise, the gradients will accumulate over loop
+			student_pred, student_feature = self.student_model(images)			# (Y): Student model prediction at its output; & (F_s): feature layer before the classification layer values 
 			# Prediction from student model
 			student_pred = student_pred * 5.0
 			
-   			# Align the shape of features 
-			student_feature = torch.nn.functional.interpolate(student_feature.unsqueeze(1),size=[self.config.hidden_dim]).squeeze(1)
+   			# Align the shape of features ***
+			student_feature = torch.nn.functional.interpolate(student_feature.unsqueeze(1), size=[self.config.hidden_dim]).squeeze(1)	# Teacher's hidden_dim = 128 (feature layer)
 
-			student_teacher_pred = self.teacher_model.interpreter(student_feature)
-
+			student_teacher_pred = self.teacher_model.interpreter(student_feature)		# 'interpreter': the Linear Classification (actually Regression) layer after the MAE Encoder, for the 12 AUs
+																						# (Y_s): Teacher model prediction FOR the STUDENT FEATURE Layer INPUT to the Teacher
 			l2loss = torch.nn.MSELoss()
    
-			# feature matching loss for feature-wise distillation
-			fm_loss = l2loss(student_feature,teacher_feature)
+			# Feature Matching Loss for Feature-wise Distillation **:
+			fm_loss = l2loss(student_feature, teacher_feature)		# MSE
 
-			# KL Loss 
-			kl_loss = self.loss_fn_kd(student_teacher_pred, teacher_pred)
+			# KL Loss **:
+			kl_loss = self.loss_fn_kd(student_teacher_pred, teacher_pred)		## KLD Loss: between the Y_t and Y_s (Teacher model's output for the Image Input to it and for Student Feature Input to it)
    
-			# Overall loss
+			# Overall loss **:
 			loss = fm_loss * self.config.alpha + kl_loss * self.config.alpha + self.criterion(student_pred.reshape(-1), labels.reshape(-1))  
-			loss.backward()
+			loss.backward()					# calculates the gradients in the computation graph
 
 			torch.nn.utils.clip_grad_norm_(self.student_model.parameters(), self.config.clip)
-			self.optimizer.step()
+			self.optimizer.step()			# will use the gradients to update the model parameters to minimize the loss
 
 			total_loss += loss.item()*batch_size
 			total_sample += batch_size
@@ -209,7 +211,7 @@ class solver_fm_distillation_grad(nn.Module):
 	def run(self):
 		best_val_pcc = -1.0
 
-		patience = self.config.patience
+		patience = self.config.patience			# for Early Stopping
 		for epochs in range(1, self.config.num_epochs+1):
 			print('Epoch: {}/{}'.format(epochs, self.config.num_epochs))
 
@@ -225,11 +227,11 @@ class solver_fm_distillation_grad(nn.Module):
 				patience = self.config.patience
 				best_val_pcc = sum(val_pcc)/len(val_pcc)
 			else:
-				patience -= 1
+				patience -= 1					# EARLY STOPPING: if no improvement of Validation Score (here PCC) for 'patience' no. of Epochs, then Stop Training further
 				if patience == 0:
 					break
 
-		# Test model
+		# Test model:
 		self.load_best_ckpt()
 		test_mse, test_mae, test_pcc = self.test_model(self.test_loader)
 		self.print_metric(test_mse, test_mae, test_pcc, 'Test')

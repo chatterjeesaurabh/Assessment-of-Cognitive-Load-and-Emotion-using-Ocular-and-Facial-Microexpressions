@@ -13,6 +13,9 @@ import time
 
 import matplotlib.pyplot as plt
 
+# TESTING / INFERENCE MAE and ResNet trained models:
+# Run: 'inference.py' with the defined arguments.
+
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
@@ -32,9 +35,9 @@ class solver_inference(nn.Module):
 
 		# Initiate the networks
 		if config.model_name == "resnet":
-			self.model = ResNet18(config).cuda()
+			self.model = ResNet18(config).cuda()				# ResNet-18	
 		elif config.model_name == "emotionnet_mae":
-			self.model = MaskedAutoEncoder(config).cuda()
+			self.model = MaskedAutoEncoder(config).cuda()		# MAE
 		else:
 			raise NotImplementedError
 
@@ -44,22 +47,22 @@ class solver_inference(nn.Module):
    
 		# Setup the optimizers and loss function
 		opt_params = list(self.model.parameters())
-		self.optimizer = torch.optim.AdamW(opt_params, lr=config.learning_rate, weight_decay=config.weight_decay)
+		self.optimizer = torch.optim.AdamW(opt_params, lr=config.learning_rate, weight_decay=config.weight_decay)		# AdamW Optimizer
 		self.criterion = nn.MSELoss()
 		print("Number of params: ",count_parameters(self.model))
 		# Setup AU index
-		self.aus = [1,2,4,5,6,9,12,15,17,20,25,26]
+		self.aus = [1,2,4,5,6,9,12,15,17,20,25,26]		# Face Action Unit Names
 
 		# Select the best ckpt
 		self.best_val_metric = -1.0
 
 
 	def get_data_loaders(self):
-		data = self.config.data
-		data_root = self.config.data_root
+		data = self.config.data					# DISFA	
+		data_root = self.config.data_root		# /AU_Recognition/data
 		fold = self.config.fold
 		test_csv = os.path.join(data_root, data, 'labels_intensity_5', fold, 'test.csv')
-		self.test_loader = get_data_loader(test_csv, False, self.config)
+		self.test_loader = get_data_loader(test_csv, False, self.config)		# train=False
 
 
 
@@ -74,16 +77,18 @@ class solver_inference(nn.Module):
 			for (images, labels) in tqdm(test_loader):
 				images, labels = images.cuda(), labels.cuda()
 				batch_size = images.shape[0]
-				if self.config.half_precision:
+				if self.config.half_precision:			# Float16
 					images, labels = images.half(), labels.half()
 					self.model = self.model.half()
 
-				labels_pred = self.model(images)
+				labels_pred = self.model(images)			# Prediction by the Model
+
 				if self.config.half_precision:
 					labels_pred = labels_pred.float()
      
-				loss = self.criterion(labels_pred.reshape(-1), labels.reshape(-1))
-				labels_pred = torch.clamp(labels_pred * 5.0, min=0.0, max=5.0)
+				loss = self.criterion(labels_pred.reshape(-1), labels.reshape(-1))		# MSE Loss
+
+				labels_pred = torch.clamp(labels_pred * 5.0, min=0.0, max=5.0)			# Set Output value Threshold to (0, 5): if any value crosses these threshold: set them to the threshold value
 				pred_list.append(labels_pred)
 				gt_list.append(labels)
     
@@ -91,7 +96,7 @@ class solver_inference(nn.Module):
 			time_used = time.time() - start_time
 			print("time per sample:",time_used / total_sample)
    
-			pred_list = torch.cat(pred_list, dim=0).detach().cpu().numpy()
+			pred_list = torch.cat(pred_list, dim=0).detach().cpu().numpy()			# torch.cat(): Concatenates the tensors into single dimensional array
 			gt_list = torch.cat(gt_list, dim=0).detach().cpu().numpy()
 			
 
@@ -99,8 +104,8 @@ class solver_inference(nn.Module):
 			for i in range(self.num_labels):
 				mse_list.append(mean_squared_error(gt_list[:, i], pred_list[:, i]))
 				mae_list.append(mean_absolute_error(gt_list[:, i], pred_list[:, i]))
-				pcc = np.ma.corrcoef(pred_list[:, i], gt_list[:, i])[0][1]
-				pcc_list.append(pcc)
+				pcc = np.ma.corrcoef(pred_list[:, i], gt_list[:, i])[0][1]				# np.ma : masked array: let the 'corrcoef' IGNORE NaN values
+				pcc_list.append(pcc)													# Correlation Coefficient between PREDICTED ith AU value(s) vs ACTUAL value(s)
 
 			return mse_list, mae_list, pcc_list
 
@@ -122,7 +127,7 @@ class solver_inference(nn.Module):
 
 
 	def load_best_ckpt(self):
-		ckpt_name = os.path.join(self.config.ckpt_path, self.config.data, self.config.fold, self.config.model_name+'.pt')
+		ckpt_name = os.path.join(self.config.ckpt_path, self.config.data, self.config.fold, self.config.model_name+'.pt')	# AU_Recognition/resnet_disfa_all/DISFA/all/resnet.pt
 		print("Loading weights from: ",ckpt_name)
 		checkpoints = torch.load(ckpt_name)['model']
 		self.model.load_state_dict(checkpoints, strict=True)
@@ -133,6 +138,6 @@ class solver_inference(nn.Module):
 		torch.backends.cudnn.benchmark = True
 
 		# Test model
-		self.load_best_ckpt()
+		self.load_best_ckpt()		# load best checkpoint
 		test_mse, test_mae, test_pcc = self.test_model(self.test_loader)
 		self.print_metric(test_mse, test_mae, test_pcc, 'Test')

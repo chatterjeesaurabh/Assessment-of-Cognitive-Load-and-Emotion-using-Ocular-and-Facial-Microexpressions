@@ -50,18 +50,20 @@ class MyDataset(data.Dataset):
 		self.config = config
 		self.csv_file = csv_file
 
-		self.data = config.data		
-		self.data_root = config.data_root
-		self.img_size = config.image_size
-		self.crop_size = config.crop_size
-		self.train = train
+		self.data = config.data					# DISFA	
+		self.data_root = config.data_root		# /AU_Recognition/data 
+		self.img_size = config.image_size		# default: 256
+		self.crop_size = config.crop_size		# default: 254
+		self.train = train						# True / False
+
 		if self.train:
-			self.transform = image_train(img_size=self.img_size, crop_size=self.crop_size)
+			self.transform = image_train(img_size=self.img_size, crop_size=self.crop_size)		# for image resize and normalize
 		else:
-			self.transform = image_test(img_size=self.img_size, crop_size=self.crop_size)
+			self.transform = image_test(img_size=self.img_size, crop_size=self.crop_size)		# for image resize, crop and normalize
 
 		self.file_list = pd.read_csv(csv_file)
-		self.images = self.file_list['image_path']
+		self.images = self.file_list['image_path']		# images
+
 		if self.data == 'BP4D':
 			self.labels = [
 							self.file_list['au6'],
@@ -71,7 +73,7 @@ class MyDataset(data.Dataset):
 							self.file_list['au17']
 						]
 		elif self.data == 'DISFA':
-			self.labels = [
+			self.labels = [								# labels for each Action Unit corresponding to the image
 							self.file_list['au1'],
 							self.file_list['au2'],
 							self.file_list['au4'],
@@ -88,9 +90,9 @@ class MyDataset(data.Dataset):
 		self.num_labels = len(self.labels)
 
 	def data_augmentation(self, image, flip, crop_size, offset_x, offset_y):
-		image = image[:,offset_x:offset_x+crop_size,offset_y:offset_y+crop_size]
+		image = image[:,offset_x:offset_x+crop_size,offset_y:offset_y+crop_size]	# Image Crop
 		if flip:
-			image = torch.flip(image, [2])
+			image = torch.flip(image, [2])											# Image Flip
 
 		return image
 
@@ -99,17 +101,17 @@ class MyDataset(data.Dataset):
 			with Image.open(f) as img:
 				return img.convert('RGB')
 
-	def __getitem__(self, index):
+	def __getitem__(self, index):			# for returning exactly one item from the dataset via an index; this index will be provided by the DataLoader class
 		image_path = self.images[index]
 		image_name = os.path.join(self.data_root, image_path)
-		image = self.pil_loader(image_name)
+		image = self.pil_loader(image_name)		# load image from the image path
 
 		label = []
 		for i in range(self.num_labels):
 			label.append(float(self.labels[i][index]))
 		label = torch.FloatTensor(label)
 
-		if self.train:
+		if self.train:		# for Train mode:
 			heatmap = au2heatmap(image_name, label, self.img_size, self.config)
 			heatmap = torch.from_numpy(heatmap)
 			offset_y = random.randint(0, self.img_size - self.crop_size)
@@ -120,7 +122,7 @@ class MyDataset(data.Dataset):
 			heatmap = self.data_augmentation(heatmap, flip, self.crop_size // 4, offset_x // 4, offset_y // 4)
 
 			return image, label, heatmap
-		else:
+		else:				# for Test mode:
 			image = self.transform(image)
 
 			return image, label
@@ -155,13 +157,13 @@ class MyDataset_Model_Run_Only(data.Dataset):
 
 		# self.data = config.data		
 		self.data_root = config.data_root		# /AU_Recognition/data
-		self.img_size = config.image_size
-		self.crop_size = config.crop_size
+		self.img_size = config.image_size		# default: 256
+		self.crop_size = config.crop_size		# default: 254
 		
-		self.transform = image_test(img_size=self.img_size, crop_size=self.crop_size)
+		self.transform = image_test(img_size=self.img_size, crop_size=self.crop_size)		# for image resize, crop and normalize
 
 		self.file_list = pd.read_csv(csv_file)
-		self.images = self.file_list['image_path']
+		self.images = self.file_list['image_path']		# image paths
 		
 
 	def data_augmentation(self, image, flip, crop_size, offset_x, offset_y):
@@ -176,10 +178,10 @@ class MyDataset_Model_Run_Only(data.Dataset):
 			with Image.open(f) as img:
 				return img.convert('RGB')
 
-	def __getitem__(self, index):
+	def __getitem__(self, index):				# for returning exactly one item from the dataset via an index; this index will be provided by the DataLoader class
 		image_path = self.images[index]
 		image_name = os.path.join(image_path)	##
-		image = self.pil_loader(image_name)
+		image = self.pil_loader(image_name)		# load image from the image path
 
 		image = self.transform(image)
 

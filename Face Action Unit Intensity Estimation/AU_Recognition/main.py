@@ -4,7 +4,8 @@ import argparse
 from solver_train import solver_train
 from utils import set_seed
 
-
+# TRAINING: ResNet and MAE Encoder on DISFA Dataset (the PRE-TRAINING step):
+# Run this 'main.py' with the defined arguments : Code: 'solver_train.py'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
@@ -25,7 +26,7 @@ parser.add_argument('--sigma', type=float, default=10.0)
 # model
 parser.add_argument('--model_name', type=str, default='resnet', choices=['mlp','resnet_heatmap','resnet','swin','mae','emotionnet_mae','gh_feat'])
 parser.add_argument('--dropout', type=float, default=0.1)
-parser.add_argument('--ffhq_pretrain', type=str, default=None)
+parser.add_argument('--ffhq_pretrain', type=str, default=None)      #
 parser.add_argument('--hidden_dim', type=int, default=128)
 parser.add_argument('--fm_distillation',  action='store_true')
 
@@ -50,7 +51,7 @@ os.makedirs(opts.ckpt_path,exist_ok=True)
 # Fix random seed
 set_seed(opts.seed)
 
-# Setup solver 
+# Setup solver (TRAIN)
 solver = solver_train(opts).cuda()
 
 

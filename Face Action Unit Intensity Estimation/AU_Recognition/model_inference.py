@@ -8,11 +8,14 @@ import torch
 import torch.nn as nn
 
 from utils import get_data_loader, get_inference_only_data_loader
-from models.resnet18 import ResNet18
-from models.mae import MaskedAutoEncoder
+from models.resnet18 import ResNet18			# ResNet-18
+from models.mae import MaskedAutoEncoder		# MAE
 import time
 
 import matplotlib.pyplot as plt
+
+# TESTING / INFERENCE MAE and ResNet trained models:
+# Run: 'inference.py' with the defined arguments.
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -25,18 +28,18 @@ class model_inference(nn.Module):
 
 		# Setup number of labels
 
-		self.config.num_labels = 12
+		self.config.num_labels = 12		
 		self.num_labels = self.config.num_labels
 
 		# Initiate data loaders
-		# self.get_data_loaders()
-		self.get_inference_only_data_loaders()
+		self.get_data_loaders()						# for Train or Test evaluation (defined below)
+		self.get_inference_only_data_loaders()		# for Image Inference only (defined below)
 
 		# Initiate the networks
 		if config.model_name == "resnet":
-			self.model = ResNet18(config).cuda()
-		elif config.model_name == "emotionnet_mae":
-			self.model = MaskedAutoEncoder(config).cuda()
+			self.model = ResNet18(config).cuda()			# ResNet-18
+		elif config.model_name == "emotionnet_mae":			
+			self.model = MaskedAutoEncoder(config).cuda()	# MAE
 		else:
 			raise NotImplementedError
 
@@ -46,11 +49,11 @@ class model_inference(nn.Module):
    
 		# Setup the optimizers and loss function
 		opt_params = list(self.model.parameters())
-		self.optimizer = torch.optim.AdamW(opt_params, lr=config.learning_rate, weight_decay=config.weight_decay)
+		self.optimizer = torch.optim.AdamW(opt_params, lr=config.learning_rate, weight_decay=config.weight_decay)	# AdamW Optimizer
 		self.criterion = nn.MSELoss()
 		print("Number of params: ",count_parameters(self.model))
 		# Setup AU index
-		self.aus = [1,2,4,5,6,9,12,15,17,20,25,26]
+		self.aus = [1,2,4,5,6,9,12,15,17,20,25,26]		# Face Action Unit Names
 
 		# Select the best ckpt
 		self.best_val_metric = -1.0
@@ -72,8 +75,8 @@ class model_inference(nn.Module):
 
 
 	def test_model(self, test_loader):
-		with torch.no_grad():
-			self.eval()
+		with torch.no_grad():					# tells PyTorch that it doesn't need to keep track of the gradients: so saves memory and computation.
+			self.eval()							# put the model into EVALUATION/TEST MODE*
 			pred_list, gt_list = [], []
 			mse_list, mae_list, pcc_list = [], [], []
 			total_sample = 0
@@ -85,12 +88,14 @@ class model_inference(nn.Module):
 					images, labels = images.half(), labels.half()
 					self.model = self.model.half()
 
-				labels_pred = self.model(images)
+				labels_pred = self.model(images)	# Prediction by the Model
+
 				if self.config.half_precision:
 					labels_pred = labels_pred.float()
      
-				loss = self.criterion(labels_pred.reshape(-1), labels.reshape(-1))
-				labels_pred = torch.clamp(labels_pred * 5.0, min=0.0, max=5.0)
+				loss = self.criterion(labels_pred.reshape(-1), labels.reshape(-1))		# MSE Loss
+
+				labels_pred = torch.clamp(labels_pred * 5.0, min=0.0, max=5.0)			# Set Output value Threshold to (0, 5): if any value crosses these threshold: set them to the threshold value
 				pred_list.append(labels_pred)
 				gt_list.append(labels)
     
@@ -98,16 +103,16 @@ class model_inference(nn.Module):
 			time_used = time.time() - start_time
 			print("time per sample:",time_used / total_sample)
    
-			pred_list = torch.cat(pred_list, dim=0).detach().cpu().numpy()
+			pred_list = torch.cat(pred_list, dim=0).detach().cpu().numpy()		# torch.cat(): Concatenates the tensors into single dimensional array
 			gt_list = torch.cat(gt_list, dim=0).detach().cpu().numpy()
 			
 
 
-			for i in range(self.num_labels):
+			for i in range(self.num_labels):		# 12 AUs
 				mse_list.append(mean_squared_error(gt_list[:, i], pred_list[:, i]))
 				mae_list.append(mean_absolute_error(gt_list[:, i], pred_list[:, i]))
-				pcc = np.ma.corrcoef(pred_list[:, i], gt_list[:, i])[0][1]
-				pcc_list.append(pcc)
+				pcc = np.ma.corrcoef(pred_list[:, i], gt_list[:, i])[0][1]				# np.ma : masked array: let the 'corrcoef' IGNORE NaN values
+				pcc_list.append(pcc)													# Correlation Coefficient between PREDICTED ith AU value(s) vs ACTUAL value(s)
 
 			return mse_list, mae_list, pcc_list
 
@@ -146,14 +151,14 @@ class model_inference(nn.Module):
 				if self.config.half_precision:
 					labels_pred = labels_pred.float()
      
-				# labels_pred = torch.clamp(labels_pred * 5.0, min=0.0, max=5.0)
+				labels_pred = torch.clamp(labels_pred * 5.0, min=0.0, max=5.0)		# Set Output value Threshold to (0, 5): if any value crosses these threshold: set them to the threshold value
 				pred_list.append(labels_pred)
     
 				# total_sample += batch_size
 			time_used = time.time() - start_time
 			print("time per sample:",time_used)
    
-			pred_list = torch.cat(pred_list, dim=0).detach().cpu().numpy()
+			pred_list = torch.cat(pred_list, dim=0).detach().cpu().numpy()		# torch.cat(): Concatenates the tensors into single dimensional array
 			
 
 			return pred_list
@@ -171,8 +176,12 @@ class model_inference(nn.Module):
 		torch.backends.cudnn.benchmark = True
 
 		# Test model
-		self.load_best_ckpt()
-		# test_mse, test_mae, test_pcc = self.test_model(self.test_loader)
+		self.load_best_ckpt()		# load best checkpoint
+
+		# Test Model using Test Set:
+		# test_mse, test_mae, test_pcc = self.test_model(self.test_loader)		
+
+		# Run Model on any set of Images:
 		pred_list = self.run_model(self.data_run_loader)
 		# self.print_metric(test_mse, test_mae, test_pcc, 'Test')
 		print('predictin list: ', pred_list)

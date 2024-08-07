@@ -6,6 +6,9 @@ from solver_fm_distillation_grad import solver_fm_distillation_grad
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=0)
 
+# TRAINING ResNet with DISFA dataset - with KNOWLEDGE DISTILLATION from MAE Encoder (Fine-Tuning step):
+# Run this 'distillation.py' with the defined arguments. Code : 'solver_fm_distillation_grad.py'
+
 # storage
 parser.add_argument('--data_root', type=str, default='/home/ICT2000/dchang/TAC_project/Face_Heatmap/data')
 parser.add_argument('--ckpt_path', type=str, default='./resnet_disfa_all')
@@ -25,7 +28,7 @@ parser.add_argument('--teacher_model_path', type=str, default='/home/ICT2000/dch
 parser.add_argument('--student_model_name', type=str, default='resnet', choices=['resnet_heatmap','resnet','swin','mae','emotionnet_mae','gh_feat'])
 parser.add_argument('--student_model_path', type=str, default=None)
 parser.add_argument('--dropout', type=float, default=0.1)
-parser.add_argument('--hidden_dim', type=int, default=128)
+parser.add_argument('--hidden_dim', type=int, default=128)      # dimension of Teacher feature layer
 
 #distillation
 parser.add_argument('--alpha', type=float, default=1.0)
