@@ -71,7 +71,7 @@ Performance on DISFA datast for facial *Action Unit* intensity estimation task:
 | ---------------------- | -----------| -------- | -------- |--|
 | ResNet-18              |   0.518    |  0.278   |  0.352   | - |
 | ResNet-18 + Pre-Train  |   0.614    |  0.236   |  0.260   | - |
-| **ResNet-18 + FM Distill** |   **0.628**    |  **0.244**   |  **0.260**   | Better performance and faster  |
+| **ResNet-18 + FM Distill** |   **0.628**    |  **0.231**   |  **0.260**   | Better performance and faster  |
 | MAE + Pre-Train        |   0.674    |  0.202   |  0.270   | Best performance, but heavy and slowest |
 
 
